@@ -3,3 +3,5 @@
 echo $hostname
 
 echo $whoami
+
+echo "hello"
