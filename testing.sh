@@ -2,6 +2,6 @@
 
 echo $hostname
 
-echo $whoami
+whoami
 
-echo "hello"
+echo "Hellow world"
