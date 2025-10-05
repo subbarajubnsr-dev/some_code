@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write  # needed to push new branches
+      contents: write  # needed to push branches
 
     steps:
       - name: Checkout repository
@@ -18,12 +18,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get list of changed files from merge commit (excluding workflows)
+      - name: Get list of changed files (exclude workflows)
         id: changes
         run: |
           echo "Finding files changed in this merge..."
-          # exclude any .github/workflows/ files
+          # exclude any GitHub workflow YAMLs
           git diff --name-only HEAD^ HEAD | grep -v '^.github/workflows/' > changed_files.txt || true
+
           echo "Changed files:"
           cat changed_files.txt || echo "No changed files found."
 
@@ -41,10 +42,10 @@ jobs:
               cp "$file" "changed_only/$file"
             fi
           done < changed_files.txt
-          echo "Files copied:"
+          echo "Files copied into 'changed_only/':"
           ls -R changed_only || echo "No files copied."
 
-      - name: Create and push new branch with only changed files
+      - name: Create and push new branch
         run: |
           cd changed_only
           git init -b main
@@ -55,11 +56,11 @@ jobs:
           git checkout -b "$BRANCH_NAME"
 
           git add .
-          git commit -m "New branch with only changed files from PR #${{ github.event.pull_request.number }}"
+          git commit -m "Branch with only changed files from PR #${{ github.event.pull_request.number }}"
 
           git remote add origin https://x-access-token:${{ secrets.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 }}@github.com/${{ github.repository }}.git
           git push origin "$BRANCH_NAME"
 
       - name: Summary
         run: |
-          echo "✅ Successfully created and pushed branch: changes-from-pr-${{ github.event.pull_request.number }}-${{ github.run_number }}"
+          echo " Created and pushed branch: changes-from-pr-${{ github.event.pull_request.number }}-${{ github.run_number }}"
