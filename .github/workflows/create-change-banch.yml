@@ -58,7 +58,7 @@ jobs:
           git add .
           git commit -m "Branch with only changed files from PR #${{ github.event.pull_request.number }}"
 
-          git remote add origin https://x-access-token:${{ secrets.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 }}@github.com/${{ github.repository }}.git
+          git remote add origin https://x-access-token:${{ secrets.PERSONAL_TOKEN }}@github.com/${{ github.repository }}.git
           git push origin "$BRANCH_NAME"
 
       - name: Summary
