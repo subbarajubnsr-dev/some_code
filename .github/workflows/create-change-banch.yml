@@ -10,38 +10,57 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write  # needed to push branches
+      contents: write  # needed to push new branches
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # we need history for diff
+          fetch-depth: 0  # full history required for diffs
 
-      - name: Get list of changed files
+      - name: Get list of changed files from the merge commit
         id: changes
         run: |
-          git fetch origin main
-          git diff --name-only origin/main HEAD > changed_files.txt
+          echo "Finding files changed in this merge..."
+          # Compare the last commit (the merge) with its first parent
+          git diff --name-only HEAD^ HEAD > changed_files.txt
           echo "Changed files:"
-          cat changed_files.txt
+          cat changed_files.txt || echo "No changed files found."
 
-      - name: Create temporary folder with changed files
+          if [ ! -s changed_files.txt ]; then
+            echo "No changed files found. Exiting gracefully."
+            exit 0
+          fi
+
+      - name: Create temporary folder and copy changed files
         run: |
           mkdir changed_only
           while IFS= read -r file; do
-            mkdir -p "changed_only/$(dirname "$file")"
-            cp "$file" "changed_only/$file" 2>/dev/null || true
+            if [ -f "$file" ]; then
+              mkdir -p "changed_only/$(dirname "$file")"
+              cp "$file" "changed_only/$file"
+            fi
           done < changed_files.txt
 
-      - name: Create new branch with only changed files
+          echo "Files copied to 'changed_only/' directory:"
+          ls -R changed_only || echo "No files copied."
+
+      - name: Create and push new branch with only changed files
         run: |
           cd changed_only
           git init
           git config user.name "subbarajubnsr-dev"
           git config user.email "subbaraju.bnsr@gmail.com"
-          git checkout -b changes-from-${{ github.run_number }}
+
+          BRANCH_NAME="changes-from-pr-${{ github.event.pull_request.number }}-${{ github.run_number }}"
+          git checkout -b "$BRANCH_NAME"
+
           git add .
-          git commit -m "New branch with only changed files from PR #${{ github.event.pull_request.number }}"
+          git commit -m "Branch with only changed files from PR #${{ github.event.pull_request.number }}"
+
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git push origin changes-from-${{ github.run_number }}
+          git push origin "$BRANCH_NAME"
+
+      - name: Summary
+        run: |
+          echo "✅ Created and pushed branch: changes-from-pr-${{ github.event.pull_request.number }}-${{ github.run_number }}"
